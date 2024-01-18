@@ -14,6 +14,7 @@ import random
 import nltk
 from nltk.corpus import wordnet
 import pickle
+import gdown
 
 nltk.download('stopwords')
 nltk.download('wordnet')
@@ -69,6 +70,7 @@ def preprocess_article(header, content):
 
 def predict_label(loader):
     # There might be a better way to save/load
+    download_pretrained_model()
     with open('models/poli_bias_bert.pkl', 'rb') as f:
         model = pickle.load(f)
     model.eval()
@@ -81,3 +83,9 @@ def predict_label(loader):
         logits = outputs.logits
         prediction = torch.argmax(logits, dim=-1).tolist()
         return prediction
+    
+def download_pretrained_model():
+    file_id = '1PX2zVyPMfs0v7wxRzx7w2h-yW1h1Ti7B'
+    url = f'https://drive.google.com/uc?id={file_id}'
+    output = 'models/poli_bias_bert.pkl'  
+    gdown.download(url, output, quiet=False)
