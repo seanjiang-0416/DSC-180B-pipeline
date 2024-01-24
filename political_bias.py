@@ -70,7 +70,6 @@ def preprocess_article(header, content):
 
 def predict_label(loader):
     # There might be a better way to save/load
-    download_pretrained_model()
     with open('models/poli_bias_bert.pkl', 'rb') as f:
         model = pickle.load(f)
     model.eval()
