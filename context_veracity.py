@@ -13,6 +13,7 @@ from nltk.tokenize import word_tokenize
 import torch
 from nltk import sent_tokenize, pos_tag, ne_chunk
 
+
 # 1 for drift, 0 for non-drift
 def sentiment_score(result):
     scale = {
@@ -24,6 +25,19 @@ def sentiment_score(result):
     overall_score = sum(numerical_scores)
     return overall_score
 
+def clean_text(text):
+    nltk.download('words')
+    nltk.download('maxent_ne_chunker')
+    nltk.download('averaged_perceptron_tagger')
+    nltk.download('punkt')
+    cleaned_text = re.sub(r'\xa0', ' ', text)
+    cleaned_text = re.sub(r'\\', '', cleaned_text)
+    cleaned_text = re.sub(r'\s+', ' ', cleaned_text)  # Replace multiple spaces with a single space
+    cleaned_text = cleaned_text.encode('ascii', 'ignore').decode('utf-8')
+    cleaned_text = cleaned_text.strip()
+    cleaned_text = re.sub(r'“|”', '"', cleaned_text)
+    return cleaned_text
+
 def sentiment_shift(article):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -32,13 +46,7 @@ def sentiment_shift(article):
         return_all_scores=True,
         device=device
     )
-    cleaned_text = re.sub(r'\xa0', ' ', article)
-    cleaned_text = re.sub(r'\\', '', cleaned_text)
-    cleaned_text = re.sub(r'\n', ' ', cleaned_text)
-    cleaned_text = re.sub(r'\s+', ' ', cleaned_text)  # Replace multiple spaces with a single space
-    cleaned_text = cleaned_text.encode('ascii', 'ignore').decode('utf-8')
-    cleaned_text = cleaned_text.strip()
-    cleaned_text = re.sub(r'“|”', '"', cleaned_text)
+    cleaned_text = clean_text(article)
     data = []
     sentences = sent_tokenize(article)
     for sentence in sentences:
@@ -59,13 +67,7 @@ def sentiment_shift(article):
     
 # 1 for drift, 0 for non-drift
 def topic_shift(article):
-    cleaned_text = re.sub(r'\xa0', ' ', article)
-    cleaned_text = re.sub(r'\\', '', cleaned_text)
-    cleaned_text = re.sub(r'\n', ' ', cleaned_text)
-    cleaned_text = re.sub(r'\s+', ' ', cleaned_text)  # Replace multiple spaces with a single space
-    cleaned_text = cleaned_text.encode('ascii', 'ignore').decode('utf-8')
-    cleaned_text = cleaned_text.strip()
-    cleaned_text = re.sub(r'“|”', '"', cleaned_text)
+    cleaned_text = clean_text(article)
     data = []
     sentences = sent_tokenize(article)
     vectorizer = CountVectorizer(stop_words='english')
@@ -101,15 +103,6 @@ def tree_to_string(tree):
     else:
         return tree[0]
 def ner_shift(article):
-    def clean_text(text):
-        cleaned_text = re.sub(r'\xa0', ' ', text)
-        cleaned_text = re.sub(r'\\', '', cleaned_text)
-        cleaned_text = re.sub(r'\s+', ' ', cleaned_text)  # Replace multiple spaces with a single space
-        cleaned_text = cleaned_text.encode('ascii', 'ignore').decode('utf-8')
-        cleaned_text = cleaned_text.strip()
-        cleaned_text = re.sub(r'“|”', '"', cleaned_text)
-        return cleaned_text
-
     sentences = sent_tokenize(article)
     sentences_length = len(sentences)
     half_index = sentences_length // 2
