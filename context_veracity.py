@@ -120,4 +120,7 @@ def calculate_contextual_drift(topic_score, sent_score, ner_score):
     b = 0.4  # coefficient for sentiment_drift
     c = 0.1  # coefficient for ner_shift_count
     d = 0.1  # constant term
-    return a * topic_score + b * sent_score + c * ner_score + d
+    score = a * topic_score + b * sent_score + c * ner_score + d
+    if score >= 10:
+        return 10
+    return score

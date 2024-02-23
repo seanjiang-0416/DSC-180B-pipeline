@@ -15,6 +15,7 @@ import nltk
 from nltk.corpus import wordnet
 import pickle
 import gdown
+import os
 
 nltk.download('stopwords')
 nltk.download('wordnet')
@@ -86,5 +87,10 @@ def predict_label(loader):
 def download_pretrained_model():
     file_id = '1PX2zVyPMfs0v7wxRzx7w2h-yW1h1Ti7B'
     url = f'https://drive.google.com/uc?id={file_id}'
-    output = 'models/poli_bias_bert.pkl'  
-    gdown.download(url, output, quiet=False)
+    output = 'models/poli_bias_bert.pkl'
+
+    if not os.path.exists(output):
+        gdown.download(url, output, quiet=False)
+    else:
+        print(f"File '{output}' already exists. No download needed.")
+

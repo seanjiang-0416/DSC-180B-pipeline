@@ -5,6 +5,7 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 import numpy as np
 import json
 import gdown
+import os
 
 class RoBERTaDetector(torch.nn.Module):
     def __init__(self, model_name="roberta-base"):
@@ -46,14 +47,17 @@ def predict(input_text):
     model = RoBERTaDetector().to(device)
 
     # Load the saved model weights
-    model.load_state_dict(torch.load("models/best_model.pt", map_location=device))
+    model.load_state_dict(torch.load("models/txt_manipulation_model.pt", map_location=device))
 
     # Make a prediction
-    prediction = predict(model, input_text, tokenizer, device)
+    prediction = evaluate(model, input_text, tokenizer, device)
     return prediction
 
 def download_pretrained_model():
     file_id = '16HWputlJWKbu1Z_oRIDNSXKVDjvydAbD'
     url = f'https://drive.google.com/uc?id={file_id}'
     output = 'models/txt_manipulation_model.pt'
-    gdown.download(url, output, quiet=False)
+    if not os.path.exists(output):
+        gdown.download(url, output, quiet=False)
+    else:
+        print(f"File '{output}' already exists. No download needed.")
