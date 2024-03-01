@@ -1,10 +1,7 @@
-import numpy as np
 import pandas as pd
 import string
-import nltk
 from nltk import word_tokenize, pos_tag
 from nltk.corpus import stopwords
-from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -108,7 +105,7 @@ class ClickbaitModel():
                             "somethingd", "somethingdnt", "somethingdntve", "somethingdve", "somethingll", "somethings",
                             "yall", "yalldve", "yalldntve", "yallll", "yallont", "yallllve", "yallre", "yallllvent", "yaint"]
 
-        self.data = pd.read_csv('../data/clickbait_data.csv')
+        self.data = pd.read_csv('clickbait_data.csv')
         self.clf = MLPClassifier(alpha=1, max_iter=1000)
         self.scaler = StandardScaler(with_mean=False)
 
@@ -150,8 +147,8 @@ class ClickbaitModel():
         predProb = self.clf.predict_proba(X)[:,1]
         return pred, predProb
 
-    def predict_text(self, text: str):
+    def predict_text(self, headline: str):
         df = pd.DataFrame(index=[0], columns=['headline'])
-        df['headline'] = text
+        df['headline'] = headline
 
         return self.predict(df)
