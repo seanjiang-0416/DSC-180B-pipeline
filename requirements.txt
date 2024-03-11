@@ -11,4 +11,4 @@ transformers
 weaviate-client==3.*
 pandas
 langchain-google-genai
-streamlite
+streamlit
