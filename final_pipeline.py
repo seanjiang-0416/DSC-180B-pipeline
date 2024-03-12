@@ -31,6 +31,8 @@ import streamlit as st
 warnings.filterwarnings("ignore")
 
 def final_pipeline_script(url = None, text = None):
+
+    @st.cache_data
     def scrape_site(url):
         response = requests.get(url)
 
@@ -120,6 +122,7 @@ def final_pipeline_script(url = None, text = None):
     # chunked_articles = [document.page_content for document in chunked_articles]
 
     # Our tokenized method
+    @st.cache_data()
     def text_embedding(data):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
@@ -239,6 +242,7 @@ def final_pipeline_script(url = None, text = None):
         else:
             return "true"
 
+    @st.cache_data
     def evaluate_claim(claim, prev_fact_checks):
 
         prompt = f""" I have the following 6 classes and a range of veracity scores corresponding to each class
@@ -365,54 +369,54 @@ def final_pipeline_script(url = None, text = None):
 
         return score_to_label(int(rating)), justification 
 
-    def sentiment_score(chunk):
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        distilled_student_sentiment_classifier = pipeline(
-            model="lxyuan/distilbert-base-multilingual-cased-sentiments-student", 
-            return_all_scores=False,
-            device=device
-        )
-        result = distilled_student_sentiment_classifier(chunk)[0]['label']
-        if result == 'positive':
-            return 0
-        elif result == 'negative':
-            return 2
-        else:
-            return 1
+    # def sentiment_score(chunk):
+    #     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    #     distilled_student_sentiment_classifier = pipeline(
+    #         model="lxyuan/distilbert-base-multilingual-cased-sentiments-student", 
+    #         return_all_scores=False,
+    #         device=device
+    #     )
+    #     result = distilled_student_sentiment_classifier(chunk)[0]['label']
+    #     if result == 'positive':
+    #         return 0
+    #     elif result == 'negative':
+    #         return 2
+    #     else:
+    #         return 1
 
-    def style_score(chunk):
-        text_manipulation.download_pretrained_model()
-        label = text_manipulation.predict(chunk)
-        return label
+    # def style_score(chunk):
+    #     text_manipulation.download_pretrained_model()
+    #     label = text_manipulation.predict(chunk)
+    #     return label
 
-    def source_reliability_score(chunk):
-        with open('models/srcM.pkl', 'rb') as f:
-            srcM = pickle.load(f)
-        label = srcM.predict_text(chunk)[0]
-        return label
+    # def source_reliability_score(chunk):
+    #     with open('models/srcM.pkl', 'rb') as f:
+    #         srcM = pickle.load(f)
+    #     label = srcM.predict_text(chunk)[0]
+    #     return label
 
-    def political_bias_score(chunk):
-        political_bias.download_pretrained_model()
-        processed_article = political_bias.preprocess_article(header, chunk)
-        label = political_bias.predict_label(processed_article)
-        return label
+    # def political_bias_score(chunk):
+    #     political_bias.download_pretrained_model()
+    #     processed_article = political_bias.preprocess_article(header, chunk)
+    #     label = political_bias.predict_label(processed_article)
+    #     return label
 
-    def credibility_score(authors):
-        with open('models/credibility_model.pkl', 'rb') as f:
-            cred_model = pickle.load(f)
+    # def credibility_score(authors):
+    #     with open('models/credibility_model.pkl', 'rb') as f:
+    #         cred_model = pickle.load(f)
 
-        search_results = []
-        for author in authors:
-            search_results.append(credibility.search_wikipedia(author, num_results=15))
+    #     search_results = []
+    #     for author in authors:
+    #         search_results.append(credibility.search_wikipedia(author, num_results=15))
 
-        search_pd = pd.DataFrame(search_results, columns=['text'])
-        embedded_result = credibility.text_embedding(search_pd['text'])[:, :50]
-        cred_scores = cred_model.predict(embedded_result)
-        if len(cred_scores) == 1:
-            return cred_scores[0]
-        else:
-            cred_score = np.mean(cred_scores)
-            return cred_score
+    #     search_pd = pd.DataFrame(search_results, columns=['text'])
+    #     embedded_result = credibility.text_embedding(search_pd['text'])[:, :50]
+    #     cred_scores = cred_model.predict(embedded_result)
+    #     if len(cred_scores) == 1:
+    #         return cred_scores[0]
+    #     else:
+    #         cred_score = np.mean(cred_scores)
+    #         return cred_score
 
     print("Evaluating the article chunks")
 
