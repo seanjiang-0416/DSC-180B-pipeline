@@ -8,9 +8,7 @@ def main():
     st.markdown("""
         <style>
             /* Change the background color of the entire page */
-            .stApp {
-                background-color: #f5f5dc; /* Light brown color */
-            }
+            
             /* Style the app title */
             .stApp .css-1f3it89 {
                 font-weight: bold;

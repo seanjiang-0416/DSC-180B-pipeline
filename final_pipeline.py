@@ -242,7 +242,6 @@ def final_pipeline_script(url = None, text = None):
         else:
             return "true"
 
-    @st.cache_data
     def evaluate_claim(claim, prev_fact_checks):
 
         prompt = f""" I have the following 6 classes and a range of veracity scores corresponding to each class
