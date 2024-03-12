@@ -120,14 +120,18 @@ def final_pipeline_script(url = None, text = None):
     # text_splitter = CharacterTextSplitter(chunk_size=300, chunk_overlap=0)
     # chunked_articles = text_splitter.split_documents(documents)
     # chunked_articles = [document.page_content for document in chunked_articles]
-
-    # Our tokenized method
+    
     @st.cache_data()
-    def text_embedding(data):
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    def load_bert_tokenizer(device):
         tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
         distilbert_model = DistilBertModel.from_pretrained('distilbert-base-uncased').to(device)
+        return tokenizer, distilbert_model
 
+    # Our tokenized method
+    
+    def text_embedding(data):
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        tokenizer, distilbert_model = load_bert_tokenizer(device)
         def get_bert_embeddings(data):
             tokens = tokenizer(data.tolist(), padding=True, truncation=True, return_tensors='pt').to(device)
             with torch.no_grad():

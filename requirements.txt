@@ -13,3 +13,5 @@ pandas
 langchain-google-genai
 streamlit
 tensorflow
+gcsfs==
+st-files-connection
