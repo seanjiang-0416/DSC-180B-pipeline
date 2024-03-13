@@ -1,4 +1,4 @@
-# Evidence-Augmented LLMs For Misinformation Detection Winter 2024
+# Evidence-Augmented LLMs For Misinformation Detection - Winter 2024
 
 ## Project Description
 
