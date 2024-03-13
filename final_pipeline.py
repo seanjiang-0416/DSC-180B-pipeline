@@ -194,7 +194,7 @@ def final_pipeline_script(url = None, text = None):
 
     client = weaviate.Client(
         url = "https://testing-cluster-2qgcoz4q.weaviate.network",  # Replace with your endpoint
-        auth_client_secret=weaviate.auth.AuthApiKey(api_key="qRarwGLC0CwrpQsSpK64E1V0c3HajFoAy893"),  # Replace w/ your Weaviate instance API key
+        auth_client_secret=weaviate.auth.AuthApiKey(api_key=""),  # Replace w/ your Weaviate instance API key
     )
 
     # #Advance RAG
@@ -247,7 +247,7 @@ def final_pipeline_script(url = None, text = None):
     )
 
     llm = ChatGoogleGenerativeAI(model="gemini-pro", 
-    google_api_key="AIzaSyClyO_P1azrly9sScfVL3dJnKy8q7HtayU", 
+    google_api_key="", 
                                 safety_settings={
             HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
             HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
