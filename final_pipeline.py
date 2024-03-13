@@ -8,12 +8,21 @@ import numpy as np
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.document_loaders import TextLoader
 from langchain_community.vectorstores import Weaviate
+import ssl
+try:
+    _create_unverified_https_context = ssl._create_unverified_context
+except AttributeError:
+    pass
+else:
+    ssl._create_default_https_context = _create_unverified_https_context
 import nltk
+nltk.download('wordnet')
+nltk.download('punkt')
 import torch
 from transformers import DistilBertTokenizer, DistilBertModel
 from transformers import pipeline
 from nltk.tokenize import sent_tokenize
-nltk.download('punkt')
+
 import weaviate
 import json
 import pandas as pd
@@ -23,6 +32,7 @@ from transformers import pipeline
 import text_manipulation
 import credibility
 import political_bias
+import context_veracity
 import pickle
 import warnings
 import streamlit as st
@@ -32,8 +42,18 @@ warnings.filterwarnings("ignore")
 
 def final_pipeline_script(url = None, text = None):
 
-    @st.cache_data
     def scrape_site(url):
+        if 'cnn.com' in url:
+            source = 'CNN'
+        elif 'foxnews.com' in url:
+            source = 'FOX'
+        elif 'cbsnews.com' in url:
+            source = 'CBS'
+        elif 'nbcnews.com' in url:
+            source = 'NBC'
+        else:
+            st.warning("Sorry. The given website is not supported by us.")
+            return None, None, None
         response = requests.get(url)
 
         if response.status_code == 200:
@@ -44,18 +64,32 @@ def final_pipeline_script(url = None, text = None):
 
             # Extract content
             content_tags = soup.find_all(['p'])
-            content = [tag.get_text().strip().replace('\xa0', ' ') for tag in content_tags]
-
-            # Find the keyword 'By' to extract the author's name
-            page_text = soup.get_text()
-            match = re.search(r'\bBy\s+([A-Za-z\s.,]+)', page_text)
-            authors = match.group(1).strip().replace('and', ',') if match else 'Author not found'
-            author_lst = [auth.strip() for auth in authors.split(',')]
+            content = [tag.get_text().strip().replace('\xa0', ' ').replace('\n', '') for tag in content_tags]
+            if source == 'NBC':
+                author_span = soup.find('span', class_='byline-name')
+                if author_span:
+                    author_lst = [author_span.get_text()]
+                else:
+                    author_lst = None
+            else:
+                # Find the keyword 'By' to extract the author's name
+                page_text = soup.get_text()
+                match = re.search(r'\bBy\s+([A-Za-z\s.,]+)', page_text)
+                if match:
+                    authors = match.group(1).strip().replace('and', ',')
+                    if source == 'CNN':
+                        author_lst = [auth.strip() for auth in authors.split(',')]
+                    elif source == 'FOX':
+                        author_lst = [[auth.strip() for auth in authors.split('\n')][0].strip('  Fox News')]
+                    elif source == 'CBS':
+                        author_lst = [auth.strip().replace('\n', '').strip('Updated on') for auth in authors.split(',')]
+                else:
+                    author_lst = None
             return header, content, author_lst
         else:
-            print(f"Failed to retrieve the webpage. Status code: {response.status_code}")
+            st.warning(f"Failed to retrieve the webpage. Status code: {response.status_code}")
             return None, None, None
-
+    
     def chunk_text(text, sentences_per_chunk=3):
         sentences = sent_tokenize(text)
         chunked_text = [' '.join(sentences[i:i + sentences_per_chunk]) for i in range(0, len(sentences), sentences_per_chunk)]
@@ -63,6 +97,9 @@ def final_pipeline_script(url = None, text = None):
 
     if url is not None:
         header, content, authors = scrape_site(url)
+        if header == None and content == None and authors == None:
+            st.markdown("<div class='error-message'>We are not able to proceed due to given warnings</div>", unsafe_allow_html=True)
+            return
         content = chunk_text((" ").join(content))
         print("Retrieved article content.")
     elif text is not None:
@@ -70,7 +107,8 @@ def final_pipeline_script(url = None, text = None):
         header = None
         authors = None
         print('Input text chunked.')
-
+    
+    
 
     # # Advance RAG
     # print("Retrieving keywords...")
@@ -121,7 +159,7 @@ def final_pipeline_script(url = None, text = None):
     # chunked_articles = text_splitter.split_documents(documents)
     # chunked_articles = [document.page_content for document in chunked_articles]
     
-    @st.cache_data()
+    @st.cache_data
     def load_bert_tokenizer(device):
         tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
         distilbert_model = DistilBertModel.from_pretrained('distilbert-base-uncased').to(device)
@@ -217,20 +255,6 @@ def final_pipeline_script(url = None, text = None):
             HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
         })
 
-    # def score_to_label(score):
-    #     # Map the score back to the corresponding label
-    #     if score < 16.666:
-    #         return "pants-fire"
-    #     elif score < 33.333:
-    #         return "false"
-    #     elif score < 50:
-    #         return "barely-true"
-    #     elif score < 66.666:
-    #         return "half-true"
-    #     elif score < 83.333:
-    #         return "mostly-true"
-    #     else:
-    #         return "true"
     def score_to_label(score):
         # Map the score back to the corresponding label
         if score == 5:
@@ -360,9 +384,6 @@ def final_pipeline_script(url = None, text = None):
         """
         
         response = llm.invoke(prompt).content
-        # print(response)
-        # rating = score_to_label(int(response.split('.')[0]))
-        # justification = '.'.join(response.split('.')[1:])
 
         parts = response.split('. ', 1)
         if len(parts) == 2:
@@ -372,87 +393,142 @@ def final_pipeline_script(url = None, text = None):
 
         return score_to_label(int(rating)), justification 
 
-    # def sentiment_score(chunk):
-    #     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    #     distilled_student_sentiment_classifier = pipeline(
-    #         model="lxyuan/distilbert-base-multilingual-cased-sentiments-student", 
-    #         return_all_scores=False,
-    #         device=device
-    #     )
-    #     result = distilled_student_sentiment_classifier(chunk)[0]['label']
-    #     if result == 'positive':
-    #         return 0
-    #     elif result == 'negative':
-    #         return 2
-    #     else:
-    #         return 1
+    @st.cache_data()
+    def get_sentiment_model(device):
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        distilled_student_sentiment_classifier = pipeline(
+            model="lxyuan/distilbert-base-multilingual-cased-sentiments-student", 
+            return_all_scores=False,
+            device=device
+        )
+        return distilled_student_sentiment_classifier
 
-    # def style_score(chunk):
-    #     text_manipulation.download_pretrained_model()
-    #     label = text_manipulation.predict(chunk)
-    #     return label
+    def sentiment_score(chunk):
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        distilled_student_sentiment_classifier = get_sentiment_model(device)
+        result = distilled_student_sentiment_classifier(chunk)[0]['label']
+        if result == 'positive':
+            return 0
+        elif result == 'negative':
+            return 2
+        else:
+            return 1
 
-    # def source_reliability_score(chunk):
-    #     with open('models/srcM.pkl', 'rb') as f:
-    #         srcM = pickle.load(f)
-    #     label = srcM.predict_text(chunk)[0]
-    #     return label
+    def style_score(chunk):
+        text_manipulation.download_pretrained_model()
+        label = text_manipulation.predict(chunk)
+        return label
 
-    # def political_bias_score(chunk):
-    #     political_bias.download_pretrained_model()
-    #     processed_article = political_bias.preprocess_article(header, chunk)
-    #     label = political_bias.predict_label(processed_article)
-    #     return label
+    def source_reliability_score(chunk):
+        with open('models/srcM.pkl', 'rb') as f:
+            srcM = pickle.load(f)
+        label = srcM.predict_text(chunk)[0]
+        return label
 
-    # def credibility_score(authors):
-    #     with open('models/credibility_model.pkl', 'rb') as f:
-    #         cred_model = pickle.load(f)
+    def political_bias_score(chunk):
+        political_bias.download_pretrained_model()
+        processed_article = political_bias.preprocess_article(header, chunk)
+        label = political_bias.predict_label(processed_article)[0]
+        return label
 
-    #     search_results = []
-    #     for author in authors:
-    #         search_results.append(credibility.search_wikipedia(author, num_results=15))
 
-    #     search_pd = pd.DataFrame(search_results, columns=['text'])
-    #     embedded_result = credibility.text_embedding(search_pd['text'])[:, :50]
-    #     cred_scores = cred_model.predict(embedded_result)
-    #     if len(cred_scores) == 1:
-    #         return cred_scores[0]
-    #     else:
-    #         cred_score = np.mean(cred_scores)
-    #         return cred_score
+    def credibility_score(authors):
+        with open('models/credibility_model.pkl', 'rb') as f:
+            cred_model = pickle.load(f)
+
+        search_results = []
+        for author in authors:
+            search_results.append(credibility.search_wikipedia(author, num_results=15))
+
+        search_pd = pd.DataFrame(search_results, columns=['text'])
+        embedded_result = credibility.text_embedding(search_pd['text'])[:, :50]
+        cred_scores = cred_model.predict(embedded_result)
+        if len(cred_scores) == 1:
+            return cred_scores[0]
+        else:
+            cred_score = np.mean(cred_scores)
+            return cred_score
+
+    def spam_score(header):
+        with open('models/spamM.pkl', 'rb') as f:
+            spamM = pickle.load(f)
+        pred_label = spamM.predict_article(header)[0]
+        if pred_label:
+            spam_score = 1
+        else:
+            spam_score = 0
+        return spam_score
+
+    def clickbait_score(header):
+        with open('models/clickM.pkl', 'rb') as f:
+            clickM = pickle.load(f)
+        label, proba = clickM.predict_text(header)
+        return label[0]
+
+    def context_veracity_score(content):
+        content_concat = " ".join(content)
+        sent_score = context_veracity.sentiment_shift(content_concat)
+        topic_score = context_veracity.topic_shift(content_concat)
+        ner_score = context_veracity.ner_shift(content_concat)
+        context_veracity_score = context_veracity.calculate_contextual_drift(sent_score, topic_score, ner_score)
+        return context_veracity_score
 
     print("Evaluating the article chunks")
 
-    # Normalize scoring method
-    # min_val, max_val = 4.0136, 6.259 # Get more accurate number
-    # def normalization(score):
-    #     if max_val - min_val == 0:  # Check for zero division
-    #         return 0
-    #     elif score > max_val:
-    #         return 1
-    #     else:
-    #         return (score - min_val) / (max_val - min_val)
-    # credibility_scr = normalization(credibility_score(authors))
+
+
     for i in range (len(content)):
         chunk = content[i]
         st.markdown(f"<span style='font-weight:bold; color:red;'>Given context:</span> {chunk}", unsafe_allow_html=True)
         st.write("Here is the evaluation:")
         for attempt in range(10):
             try:
-                # style_scr = style_score(chunk)
-                # sentiment_scr = sentiment_score(chunk)
-                # source_reliability_scr = source_reliability_score(chunk)
-                # political_bias_scr = political_bias_score(chunk)
                 rating, justification = evaluate_claim(chunk, evidence[i])
                 st.markdown(f"<span style='font-weight:bold; color:blue;'>The rating is:</span> {rating}", unsafe_allow_html=True)
-                st.markdown(f"<span style='font-weight:bold; color:green;'>The justification:</span> {justification} \n\n", unsafe_allow_html=True)
-
-                # pred_output = f"The political bias score is {political_bias_scr}, indicating the degree of political leanings in the content. The credibility score is {credibility_scr}, reflecting the trustworthiness and accuracy of the information. The text manipulation score is {style_scr}, which assesses whether the text has been manipulated. The sentiment score is {sentiment_scr}, revealing the overall tone and mood of the content. Lastly, the source reliability score is {source_reliability_scr}, evaluating the dependability and consistency of the source."
-                # print(pred_output)
+                st.markdown(f"<span style='font-weight:bold; color:green;'>The justification:</span> {justification}", unsafe_allow_html=True)
+                style_scr = style_score(chunk)
+                sentiment_scr = sentiment_score(chunk)
+                source_reliability_scr = source_reliability_score(chunk)
+                political_bias_scr = political_bias_score(chunk)
+                pred_output = f"The political bias score is {political_bias_scr}, indicating the degree of political leanings in the content where 0 is left, 1 is neutral, and 2 is right. The text manipulation score is {style_scr} (ranging from 0 to 1), which assesses the degree to which the text has been manipulated, with a higher score indicating more manipulation. The sentiment score is {sentiment_scr} (ranging from 0 to 2), revealing the overall tone and mood of the content, where a lower score suggests a more positive sentiment and a higher score indicates a more negative tone. The source reliability score is {source_reliability_scr} (ranging from 0 to 5), evaluating the dependability and consistency of the source, with a higher score indicating greater risk in its source and a lower score suggests more consistent source."
+                st.markdown(f"<span style='font-weight:bold; color:orange;'>The Predictive AI scores:</span> {pred_output}", unsafe_allow_html=True)
                 break
             except ValueError as e:
                 if attempt == 9:  # Last attempt
-                    st.write(f"Failed to evaluate chunk after 5 attempts: {e}")
+                    st.write(f"Failed to evaluate chunk after 9 attempts: {e}")
+    
+    overall_output = ""
+    if authors:
+        # Normalize scoring method
+        min_val, max_val = 4.0136, 6.259 # Get more accurate number
+        def normalization(score):
+            if max_val - min_val == 0:  # Check for zero division
+                return 0
+            elif score > max_val:
+                return 1
+            else:
+                return (score - min_val) / (max_val - min_val)
+        cred_score = credibility_score(authors)
+        credibility_scr = normalization(cred_score)
+        overall_output += f"The credibility score is {credibility_scr} (ranging from 0 to 1), where a higher score reflects greater trustworthiness and accuracy of the information."
+    else:
+        overall_output += f"The credibility score is not applicable."
+    
+    if header:
+        spam_src, clickbait_src = spam_score(header), clickbait_score(header)
+        overall_output += f"The spam score is {spam_src} (ranging from 0 to 1), where 0 indicates low likelihood of spam and 1 indicates high likelihood of spam, indicating the likelihood that the content is unsolicited or irrelevant."
+        overall_output += f"The clickbait score is {clickbait_src} (ranging from 0 to 1), where 0 indicates low likelihood of clickbait and 1 indicates high likelihood of clickbait, assessing the degree to which the content uses sensational or misleading headlines to attract clicks."
+    else:
+        spam_src, clickbait_src = 0, 0
+        overall_output += "Both spam and clickbait scores are not applicable."
+    try:
+        context_veracity_src = context_veracity_score(content)
+        overall_output += f"The context veracity score is {round(context_veracity_src, 2)}(from 0 to 10), reflecting the accuracy and truthfulness of the context in which the information is presented. The higher the context veracity score, the more likely that content shifts exist."
+    except:
+        context_veracity_src = 0
+        overall_output += "The context veracity score is not applicable."
+
+    st.markdown(f"{overall_output}")
 if __name__ == "__main__":
     test_url = 'https://www.cnn.com/2024/01/17/politics/biden-ukraine-white-house-meeting/index.html'
     test_text = "In the heart of an ancient forest, where the trees whispered secrets of a bygone era, there lay a hidden glade, bathed in the ethereal glow of the moonlight. A gentle breeze danced through the leaves, carrying with it the sweet scent of blooming flowers and the distant sound of a babbling brook. The stars above twinkled like a tapestry of diamonds, casting a serene light over the verdant undergrowth. Amidst this tranquil setting, a majestic stag emerged from the shadows, its antlers glistening with dewdrops. It moved gracefully, as if in tune with the rhythm of the forest, pausing occasionally to listen to the soft murmur of the wind. In the distance, an owl hooted, adding a layer of mystery to the night's symphony. As the night deepened, a faint glow appeared on the horizon, heralding the arrival of dawn. The first rays of the sun filtered through the canopy, painting the sky in hues of pink and gold. The forest slowly awakened, with birds chirping and squirrels scampering about, each creature starting its day in this secluded haven. In this magical glade, time seemed to stand still, offering a moment of peace and reflection for those who stumbled upon its beauty. It was a reminder of the wonders of nature, a sanctuary untouched by the chaos of the outside world. Here, in the embrace of the forest, one could find solace and rejuvenation, a connection to the earth that was both ancient and eternal."

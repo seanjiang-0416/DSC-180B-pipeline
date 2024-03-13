@@ -36,7 +36,7 @@ def main():
     """, unsafe_allow_html=True)
 
     # Input boxes for URL and Text
-    url = st.text_input("Enter URL:", placeholder="https://example.com")
+    url = st.text_input("Enter URL (currently supporting CNN, FOX, NBC, CBS):", placeholder="https://example.com")
     text = st.text_area("Enter Text:", placeholder="Type or paste text here...", height=150)
 
     # Button to run the script

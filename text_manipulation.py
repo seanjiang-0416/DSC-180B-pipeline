@@ -6,6 +6,7 @@ import numpy as np
 import json
 import gdown
 import os
+import streamlit as st
 
 class RoBERTaDetector(torch.nn.Module):
     def __init__(self, model_name="roberta-base"):
@@ -53,6 +54,7 @@ def predict(input_text):
     prediction = evaluate(model, input_text, tokenizer, device)
     return prediction
 
+@st.cache_data
 def download_pretrained_model():
     file_id = '16HWputlJWKbu1Z_oRIDNSXKVDjvydAbD'
     url = f'https://drive.google.com/uc?id={file_id}'

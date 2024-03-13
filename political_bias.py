@@ -16,6 +16,7 @@ from nltk.corpus import wordnet
 import pickle
 import gdown
 import os
+import streamlit as st
 
 nltk.download('stopwords')
 nltk.download('wordnet')
@@ -71,8 +72,8 @@ def preprocess_article(header, content):
 
 def predict_label(loader):
     # There might be a better way to save/load
-    with open('models/poli_bias_bert.pkl', 'rb') as f:
-        model = pickle.load(f)
+    model_path = 'models/poli_bias_bert.pt'  # Ensure the model is saved with .pt extension
+    model = torch.load(model_path, map_location=torch.device('cpu'))
     model.eval()
     device = torch.device('cuda' if torch.cuda.is_available() else torch.device('cpu'))
     for batch in loader:
@@ -83,11 +84,12 @@ def predict_label(loader):
         logits = outputs.logits
         prediction = torch.argmax(logits, dim=-1).tolist()
         return prediction
-    
+
+@st.cache_data
 def download_pretrained_model():
-    file_id = '1PX2zVyPMfs0v7wxRzx7w2h-yW1h1Ti7B'
+    file_id = '1xKOJ2CO3YPSIJthJ2b20iJab9lgb1-z2'
     url = f'https://drive.google.com/uc?id={file_id}'
-    output = 'models/poli_bias_bert.pkl'
+    output = 'models/poli_bias_bert.pt'
 
     if not os.path.exists(output):
         gdown.download(url, output, quiet=False)

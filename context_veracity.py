@@ -12,7 +12,7 @@ from transformers import pipeline
 from nltk.tokenize import word_tokenize
 import torch
 from nltk import sent_tokenize, pos_tag, ne_chunk
-
+import streamlit as st
 
 # 1 for drift, 0 for non-drift
 def sentiment_score(result):
@@ -38,7 +38,8 @@ def clean_text(text):
     cleaned_text = re.sub(r'“|”', '"', cleaned_text)
     return cleaned_text
 
-def sentiment_shift(article):
+@st.cache_data
+def load_model():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     distilled_student_sentiment_classifier = pipeline(
@@ -46,6 +47,10 @@ def sentiment_shift(article):
         return_all_scores=True,
         device=device
     )
+    return distilled_student_sentiment_classifier
+
+def sentiment_shift(article):
+    distilled_student_sentiment_classifier = load_model()
     cleaned_text = clean_text(article)
     data = []
     sentences = sent_tokenize(article)
