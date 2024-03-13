@@ -475,8 +475,6 @@ def final_pipeline_script(url = None, text = None):
 
     print("Evaluating the article chunks")
 
-
-
     for i in range (len(content)):
         chunk = content[i]
         st.markdown(f"<span style='font-weight:bold; color:red;'>Given context:</span> {chunk}", unsafe_allow_html=True)

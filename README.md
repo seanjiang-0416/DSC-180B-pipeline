@@ -8,6 +8,7 @@ This model proposes a novel approach to fact-checking by leveraging Large Langua
 
 - To install the dependencies, run the following command from the root directory of the project: `pip install -r requirements.txt`
 - To get the model running, run `python final_pipeline.py`
+- To get the web app running locally, run `streamlit run app.py`
 
 ## Data Usage
 
