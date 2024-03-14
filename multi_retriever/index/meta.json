@@ -1,0 +1,139 @@
+{
+  "index_settings": {
+    "docstore_compression": "lz4",
+    "docstore_blocksize": 16384
+  },
+  "segments": [
+    {
+      "segment_id": "2faf93ca-8284-43cc-9234-eeb8f172c5f1",
+      "max_doc": 48736,
+      "deletes": null
+    },
+    {
+      "segment_id": "7a0fe50a-3566-48de-bf25-8212528a3998",
+      "max_doc": 6165,
+      "deletes": null
+    },
+    {
+      "segment_id": "9672be94-b63f-4912-9aeb-175b41c0b726",
+      "max_doc": 6073,
+      "deletes": null
+    },
+    {
+      "segment_id": "77d6447c-ca0c-4101-a79b-8adfa41d13cb",
+      "max_doc": 6052,
+      "deletes": null
+    },
+    {
+      "segment_id": "a4386c8f-1c13-4edb-bcce-03ae82b53550",
+      "max_doc": 6034,
+      "deletes": null
+    },
+    {
+      "segment_id": "0ec49670-5fdd-4fba-899c-1a5a62d62306",
+      "max_doc": 5982,
+      "deletes": null
+    },
+    {
+      "segment_id": "07ffe28e-2544-4c78-8200-dcf3afd1ac61",
+      "max_doc": 5954,
+      "deletes": null
+    },
+    {
+      "segment_id": "9a1a92e9-9303-4a25-8c7e-9fd9bddeac97",
+      "max_doc": 5942,
+      "deletes": null
+    },
+    {
+      "segment_id": "3f78b50b-97a5-49a1-ab7d-02177d5b00d6",
+      "max_doc": 5813,
+      "deletes": null
+    },
+    {
+      "segment_id": "154e1f73-28f8-4abd-8ed7-4da8950f620d",
+      "max_doc": 5794,
+      "deletes": null
+    },
+    {
+      "segment_id": "3bba3870-da8a-4862-bc46-2c0c20cd5af7",
+      "max_doc": 5739,
+      "deletes": null
+    },
+    {
+      "segment_id": "bbf8aa86-1807-47c8-a788-14f91eec4bce",
+      "max_doc": 4706,
+      "deletes": null
+    },
+    {
+      "segment_id": "cfb416af-33ec-4876-a611-4b5f367d0606",
+      "max_doc": 4452,
+      "deletes": null
+    },
+    {
+      "segment_id": "680c17b1-33c6-4f70-b2d2-67b2817abf67",
+      "max_doc": 1,
+      "deletes": null
+    },
+    {
+      "segment_id": "725e4179-c7f9-49f3-b102-69c6a319a832",
+      "max_doc": 1,
+      "deletes": null
+    },
+    {
+      "segment_id": "6894a03d-11f6-471c-bf4f-84525421b4ee",
+      "max_doc": 1,
+      "deletes": null
+    },
+    {
+      "segment_id": "5ed6dfda-ee0c-4445-9678-6c572545dc15",
+      "max_doc": 1,
+      "deletes": null
+    },
+    {
+      "segment_id": "f6a4a326-fa3d-4341-9138-1d8c9f346b35",
+      "max_doc": 1,
+      "deletes": null
+    },
+    {
+      "segment_id": "d7e5f5f2-a524-494f-8dbf-8bce269f073b",
+      "max_doc": 1,
+      "deletes": null
+    },
+    {
+      "segment_id": "1b9ea519-1016-4842-833b-76aac14c6564",
+      "max_doc": 1,
+      "deletes": null
+    },
+    {
+      "segment_id": "a8fa8f59-125c-4afa-aa2f-d9b7efc751c2",
+      "max_doc": 1,
+      "deletes": null
+    }
+  ],
+  "schema": [
+    {
+      "name": "body",
+      "type": "text",
+      "options": {
+        "indexing": {
+          "record": "position",
+          "fieldnorms": true,
+          "tokenizer": "default"
+        },
+        "stored": false,
+        "fast": false
+      }
+    },
+    {
+      "name": "doc_id",
+      "type": "u64",
+      "options": {
+        "indexed": false,
+        "fieldnorms": false,
+        "fast": false,
+        "stored": true
+      }
+    }
+  ],
+  "opstamp": 117479
+}
