@@ -26,7 +26,6 @@ from nltk.tokenize import sent_tokenize
 import weaviate
 import json
 import pandas as pd
-from langchain_google_genai import ChatGoogleGenerativeAI
 import sys
 from transformers import pipeline
 import text_manipulation
@@ -380,7 +379,8 @@ def final_pipeline_script(url = None, text = None):
         
         
         Question: How true is the following statement on our scale of 0-5? + {claim}. Ensure that your answer begins with the score as an integer value, seperated by a period, and
-        followed by your explanation. Justify your score and explain your reasoning in a step by step fashion.
+        followed by your explanation. Justify your score and explain your reasoning in a step by step fashion. Please ensure that your predicted label must be completely consistent with your explanation.
+        
         """
         
         response = llm.invoke(prompt).content

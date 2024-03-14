@@ -36,11 +36,12 @@ def main():
     """, unsafe_allow_html=True)
 
     # Input boxes for URL and Text
+    st.markdown("This model has access to knowledge regarding news and political claims, so it's best at classifying topics related to politics and major events. Please note that this model can make mistakes, so it should only serve as a reference.")
     url = st.text_input("Enter URL (currently supporting CNN, FOX, NBC, CBS):", placeholder="https://example.com")
     text = st.text_area("Enter Text:", placeholder="Type or paste text here...", height=150)
 
     # Button to run the script
-    if st.button("Face Check!"):
+    if st.button("Fact Check!"):
         if url and text:
             st.markdown("<div class='error-message'>Please provide either a URL or text, not both.</div>", unsafe_allow_html=True)
         elif url or text:
