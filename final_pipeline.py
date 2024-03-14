@@ -193,7 +193,7 @@ def final_pipeline_script(url = None, text = None):
 
     client = weaviate.Client(
         url = "https://testing-cluster-2qgcoz4q.weaviate.network",  # Replace with your endpoint
-        auth_client_secret=weaviate.auth.AuthApiKey(api_key=""),  # Replace w/ your Weaviate instance API key
+        auth_client_secret=weaviate.auth.AuthApiKey(api_key="qRarwGLC0CwrpQsSpK64E1V0c3HajFoAy893"),  # Replace w/ your Weaviate instance API key
     )
 
     # #Advance RAG
@@ -246,7 +246,7 @@ def final_pipeline_script(url = None, text = None):
     )
 
     llm = ChatGoogleGenerativeAI(model="gemini-pro", 
-    google_api_key="", 
+    google_api_key="AIzaSyClyO_P1azrly9sScfVL3dJnKy8q7HtayU", 
                                 safety_settings={
             HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
             HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
@@ -506,11 +506,15 @@ def final_pipeline_script(url = None, text = None):
                 return 1
             else:
                 return (score - min_val) / (max_val - min_val)
-        cred_score = credibility_score(authors)
-        credibility_scr = normalization(cred_score)
-        overall_output += f"The credibility score is {credibility_scr} (ranging from 0 to 1), where a higher score reflects greater trustworthiness and accuracy of the information."
-    else:
-        overall_output += f"The credibility score is not applicable."
+        try:
+            if authors:
+                cred_score = credibility_score(authors)
+                credibility_scr = normalization(cred_score)
+                overall_output += f"The credibility score is {credibility_scr} (ranging from 0 to 1), where a higher score reflects greater trustworthiness and accuracy of the information."
+            else:
+                overall_output += f"The credibility score is not applicable."
+        except:
+            overall_output += f"The credibility score is currently not applicable."
     
     if header:
         spam_src, clickbait_src = spam_score(header), clickbait_score(header)
