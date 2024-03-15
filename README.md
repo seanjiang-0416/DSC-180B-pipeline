@@ -9,6 +9,20 @@ This model proposes a novel approach to fact-checking by leveraging Large Langua
 - [Static Website Deliverable](https://seanjiang-0416.github.io/DSC-180B-website/)
 - [Fact Check Demo](https://factcheck-app-3jgsib2xaq-uc.a.run.app/)
 
+## Files
+Our predictive models can be trained by running the following scripts:
+- `clickbait.py` (clickbait model)
+- `context_veracity.py` (context veracity model)
+- `fallacy_detection.py` (logical fallacy model`
+-  `political_bias.py` (political bias model)
+-  `source_reliable.py` (source reliability model)
+-  `spam.py` (spam model)
+-  `text_manipulation.py` (textual manipulation model)
+
+The final pipeline (including the generative model) is found in `final_pipeline.py`.
+
+Most of our experiments can be found in the `Experiment_scripts` folder.
+
 ## Running Instructions
 
 - To install the dependencies, run the following command from the root directory of the project: `pip install -r requirements.txt`
