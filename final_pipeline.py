@@ -193,7 +193,7 @@ def final_pipeline_script(url = None, text = None):
 
     client = weaviate.Client(
         url = "https://testing-cluster-2qgcoz4q.weaviate.network",  # Replace with your endpoint
-        auth_client_secret=weaviate.auth.AuthApiKey(api_key="qRarwGLC0CwrpQsSpK64E1V0c3HajFoAy893"),  # Replace w/ your Weaviate instance API key
+        auth_client_secret=weaviate.auth.AuthApiKey(api_key=""),  # Replace w/ your Weaviate instance API key
     )
 
     # #Advance RAG
@@ -246,7 +246,7 @@ def final_pipeline_script(url = None, text = None):
     )
 
     llm = ChatGoogleGenerativeAI(model="gemini-pro", 
-    google_api_key="AIzaSyClyO_P1azrly9sScfVL3dJnKy8q7HtayU", 
+    google_api_key="", 
                                 safety_settings={
             HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
             HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
@@ -475,27 +475,45 @@ def final_pipeline_script(url = None, text = None):
 
     print("Evaluating the article chunks")
 
+    false_ratings = []
     for i in range (len(content)):
         chunk = content[i]
+        st.markdown(f"<h5 style='font-weight:bold; color:brown;'>{i + 1}.</h5>", unsafe_allow_html=True)
         st.markdown(f"<span style='font-weight:bold; color:red;'>Given context:</span> {chunk}", unsafe_allow_html=True)
         st.write("Here is the evaluation:")
         for attempt in range(10):
             try:
                 rating, justification = evaluate_claim(chunk, evidence[i])
+                if rating == "pants-fire" or rating == "false":
+                    false_ratings.append(i)
+                    
                 st.markdown(f"<span style='font-weight:bold; color:blue;'>The rating is:</span> {rating}", unsafe_allow_html=True)
                 st.markdown(f"<span style='font-weight:bold; color:green;'>The justification:</span> {justification}", unsafe_allow_html=True)
                 style_scr = style_score(chunk)
                 sentiment_scr = sentiment_score(chunk)
                 source_reliability_scr = source_reliability_score(chunk)
                 political_bias_scr = political_bias_score(chunk)
-                pred_output = f"The political bias score is {political_bias_scr}, indicating the degree of political leanings in the content where 0 is left, 1 is neutral, and 2 is right. The text manipulation score is {style_scr} (ranging from 0 to 1), which assesses the degree to which the text has been manipulated, with a higher score indicating more manipulation. The sentiment score is {sentiment_scr} (ranging from 0 to 2), revealing the overall tone and mood of the content, where a lower score suggests a more positive sentiment and a higher score indicates a more negative tone. The source reliability score is {source_reliability_scr} (ranging from 0 to 5), evaluating the dependability and consistency of the source, with a higher score indicating greater risk in its source and a lower score suggests more consistent source."
+                pred_output = f"The political bias score is {political_bias_scr}, indicating the degree of political leanings in the content where 0 is left, 1 is neutral, and 2 is right. The text manipulation score is {style_scr} (ranging from 0 to 1), which assesses the degree to which the text has been manipulated, with a higher score indicating more manipulation. The sentiment score is {sentiment_scr} (ranging from 0 to 2), revealing the overall tone and mood of the content, where a lower score suggests a more positive sentiment and a higher score indicates a more negative tone. The source reliability score is {source_reliability_scr} (ranging from 0 to 5), evaluating the dependability and consistency of the source, with a higher score indicating greater risk in its source and a lower score suggests more consistent source. "
                 st.markdown(f"<span style='font-weight:bold; color:orange;'>The Predictive AI scores:</span> {pred_output}", unsafe_allow_html=True)
                 break
             except ValueError as e:
                 if attempt == 9:  # Last attempt
                     st.write(f"Failed to evaluate chunk after 9 attempts: {e}")
     
-    overall_output = ""
+    overall_output = "<span style='font-weight:bold; color:orange;'>Overall: </span> "
+
+    if len(false_ratings) > 0:
+        false_rating_output = ""
+        for i in range (len(false_ratings)):
+            if i < len(false_ratings) - 1:
+                false_rating_output += (str(false_ratings[i] + 1) + ', ')
+            else:
+                false_rating_output += str(false_ratings[i] + 1)
+
+        overall_output += f"{len(false_ratings)} out of {len(content)} statements are considered to be false or pants-on-fire. Please refer to these indexes: {false_rating_output} from the above. "
+    else:
+        overall_output += "None of the statements are considered to be false or pants-on-fire. Please take a look at the ratings and justifications above. "
+
     if authors:
         # Normalize scoring method
         min_val, max_val = 4.0136, 6.259 # Get more accurate number
@@ -507,10 +525,11 @@ def final_pipeline_script(url = None, text = None):
             else:
                 return (score - min_val) / (max_val - min_val)
         try:
+            overall_output += "For the overall Predictive AI score: "
             if authors:
                 cred_score = credibility_score(authors)
                 credibility_scr = normalization(cred_score)
-                overall_output += f"The credibility score is {credibility_scr} (ranging from 0 to 1), where a higher score reflects greater trustworthiness and accuracy of the information."
+                overall_output += f"The credibility score is {round(credibility_scr, 2)} (ranging from 0 to 1), where a higher score reflects greater trustworthiness and accuracy of the information."
             else:
                 overall_output += f"The credibility score is not applicable."
         except:
@@ -521,16 +540,16 @@ def final_pipeline_script(url = None, text = None):
         overall_output += f"The spam score is {spam_src} (ranging from 0 to 1), where 0 indicates low likelihood of spam and 1 indicates high likelihood of spam, indicating the likelihood that the content is unsolicited or irrelevant."
         overall_output += f"The clickbait score is {clickbait_src} (ranging from 0 to 1), where 0 indicates low likelihood of clickbait and 1 indicates high likelihood of clickbait, assessing the degree to which the content uses sensational or misleading headlines to attract clicks."
     else:
-        spam_src, clickbait_src = 0, 0
-        overall_output += "Both spam and clickbait scores are not applicable."
+        overall_output += "Both spam and clickbait scores are not applicable. "
     try:
         context_veracity_src = context_veracity_score(content)
         overall_output += f"The context veracity score is {round(context_veracity_src, 2)}(from 0 to 10), reflecting the accuracy and truthfulness of the context in which the information is presented. The higher the context veracity score, the more likely that content shifts exist."
     except:
-        context_veracity_src = 0
-        overall_output += "The context veracity score is not applicable."
+        overall_output += "The context veracity score is not applicable. "
 
-    st.markdown(f"{overall_output}")
+    
+    st.markdown(f"{overall_output}", unsafe_allow_html=True)
+
 if __name__ == "__main__":
     test_url = 'https://www.cnn.com/2024/01/17/politics/biden-ukraine-white-house-meeting/index.html'
     test_text = "In the heart of an ancient forest, where the trees whispered secrets of a bygone era, there lay a hidden glade, bathed in the ethereal glow of the moonlight. A gentle breeze danced through the leaves, carrying with it the sweet scent of blooming flowers and the distant sound of a babbling brook. The stars above twinkled like a tapestry of diamonds, casting a serene light over the verdant undergrowth. Amidst this tranquil setting, a majestic stag emerged from the shadows, its antlers glistening with dewdrops. It moved gracefully, as if in tune with the rhythm of the forest, pausing occasionally to listen to the soft murmur of the wind. In the distance, an owl hooted, adding a layer of mystery to the night's symphony. As the night deepened, a faint glow appeared on the horizon, heralding the arrival of dawn. The first rays of the sun filtered through the canopy, painting the sky in hues of pink and gold. The forest slowly awakened, with birds chirping and squirrels scampering about, each creature starting its day in this secluded haven. In this magical glade, time seemed to stand still, offering a moment of peace and reflection for those who stumbled upon its beauty. It was a reminder of the wonders of nature, a sanctuary untouched by the chaos of the outside world. Here, in the embrace of the forest, one could find solace and rejuvenation, a connection to the earth that was both ancient and eternal."
